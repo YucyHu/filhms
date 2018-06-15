@@ -1,0 +1,100 @@
+ 
+1.pom.xml
+<!--google kaptcha图形验证码-->
+<kaptcha.version>2.3.2</kaptcha.version>
+        <dependency>
+            <groupId>com.github.penggle</groupId>
+            <artifactId>kaptcha</artifactId>
+            <version>${kaptcha.version}</version>
+        </dependency>
+
+
+2,applicationContext.xml
+<!-- google kaptcha图形验证码配置-->
+    <bean id="captchaProducer" class="com.google.code.kaptcha.impl.DefaultKaptcha" scope="singleton">
+        <property name="config">
+            <bean class="com.google.code.kaptcha.util.Config">
+                <constructor-arg>
+                    <props>
+                        <prop key="kaptcha.session.key">random_img_code</prop>
+                        <prop key="kaptcha.border">no</prop>
+                        <prop key="kaptcha.border.color">105,179,90</prop>
+                        <!-- 验证码背景渐变色-->
+                        <prop key="kaptcha.background.clear.from">238,238,238</prop>
+                        <prop key="kaptcha.background.clear.to">238,238,238</prop>
+                        <prop key="kaptcha.image.width">160</prop>
+                        <prop key="kaptcha.image.height">50</prop>
+                        <!-- 渲染效果-->
+                        <prop key="kaptcha.obscurificator.impl">com.google.code.kaptcha.impl.ShadowGimpy</prop>
+                        <!-- 噪点-->
+                        <prop key="kaptcha.noise.impl">com.google.code.kaptcha.impl.NoNoise</prop>
+                        <!--<prop key="kaptcha.textproducer.font.color">red</prop>-->
+                        <prop key="kaptcha.textproducer.font.size">36</prop>
+                        <prop key="kaptcha.textproducer.char.space">8</prop>
+                        <prop key="kaptcha.textproducer.char.length">4</prop>
+                        <!--配置中文-->
+                        <!--<prop key="kaptcha.textproducer.impl">com.google.code.kaptcha.text.impl.ChineseTextProducer</prop>-->
+                        <!--<prop key="kaptcha.textproducer.font.names">彩云,宋体,楷体,微软雅黑</prop>-->
+                    </props>
+                </constructor-arg>
+            </bean>
+        </property>
+    </bean>
+
+
+3.jsp
+
+ //更换图形验证码&效果
+        $body.on('click', '#LAY-user-get-vercode', function () {
+            $(this).hide().attr('src','<%=basePath%>randomImgCode?t='+ new Date().getTime()).fadeIn();
+        });
+
+
+
+4.
+
+@Autowired
+    private Producer captchaProducer;
+
+ /**
+     * 描述：captcha验证码
+     * @author zhangshuai
+     * @date   2018.05.21 23:13
+     * @param request
+     * @param response
+     * @return org.springframework.web.servlet.ModelAndView
+     * @修改人 ：
+     * @修改时间 ：
+     * @修改备注 ：
+     * @version 
+     */
+    @RequestMapping("/randomImgCode")
+    public ModelAndView randomImgCode(HttpServletRequest request, HttpServletResponse response) throws Exception {
+        // 禁止server端缓存
+        response.setDateHeader("Expires", 0);
+        // 设置标准的 HTTP/1.1 no-cache headers.
+        response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+        // 设置IE扩展 HTTP/1.1 no-cache headers (use addHeader).
+        response.addHeader("Cache-Control", "post-check=0, pre-check=0");
+        // 设置标准 HTTP/1.0 不缓存图片
+        response.setHeader("Pragma", "no-cache");
+        // 返回一个 jpeg 图片，默认是text/html(输出文档的MIMI类型)
+        response.setContentType("image/jpeg");
+        // 为图片创建文本
+        String capText = captchaProducer.createText();
+
+        // 将文本保存在session中。这里就使用包中的静态变量吧
+        request.getSession().setAttribute(Constants.KAPTCHA_SESSION_KEY, capText);
+        // 创建带有文本的图片
+        BufferedImage bi = captchaProducer.createImage(capText);
+        ServletOutputStream out = response.getOutputStream();
+        // 图片数据输出
+        ImageIO.write(bi, "jpg", out);
+        try {
+            out.flush();
+        } finally {
+            out.close();
+        }
+        LogUtil.info("生成KAPTCHA验证码：" + request.getSession().getAttribute(Constants.KAPTCHA_SESSION_KEY));
+        return null;
+    }
